@@ -1,0 +1,27 @@
+[package]
+name = "corvusite-min"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mincomp = { path = "mincomp" }
+html5ever = "0.29"
+axum = { version = "0.7", features = ["ws"] }
+tokio = { version = "1.0", features = ["full"] }
+tower-http = { version = "0.5", features = [
+  "fs",
+  "compression-br",
+  "compression-gzip",
+] }
+notify-debouncer-full = "0.4"
+clap = { version = "4.4", features = ["derive"] }
+walkdir = "2.5"
+fs-err = "3.0"
+wincomp = { path = "wincomp" }
+rayon = "1.10"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev.package.mincomp]
+opt-level = 0

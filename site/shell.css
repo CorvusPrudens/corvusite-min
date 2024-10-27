@@ -1,0 +1,28 @@
+header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+header > div {
+  display: flex;
+  flex-grow: 1;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin-left: 2rem;
+  margin-right: 2rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+main {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.main-link {
+  font-size: 1.5rem;
+  font-weight: normal;
+}

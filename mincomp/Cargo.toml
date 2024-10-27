@@ -1,0 +1,8 @@
+[package]
+name = "mincomp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+html5ever = "0.29"
+slotmap = "1.0"

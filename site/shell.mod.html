@@ -1,0 +1,47 @@
+<Shell>
+  <html lang="en">
+    <head>
+      <title>Corvus Prudens</title>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1" />
+      <meta name="description" content="Corvus's personal site." />
+    </head>
+
+    <body>
+      <header>
+        <div>
+          <a href="/" class="prerender-link link-underline-2 main-link"
+            >Corvus Prudens</a
+          >
+          <div class="nav">
+            <Navlink href="/">Home</Navlink>
+            <Navlink href="/music">Music</Navlink>
+            <Navlink href="/blog">Blog</Navlink>
+          </div>
+          <ButtonLink> GitHub </ButtonLink>
+        </div>
+      </header>
+
+      <main>
+        <children />
+      </main>
+
+      <script type="speculationrules">
+        {
+          "prefetch": [
+            {
+              "where": { "selector_matches": ".prerender-link" },
+              "eagerness": "eager"
+            }
+          ],
+          "prerender": [
+            {
+              "where": { "selector_matches": ".prerender-link" },
+              "eagerness": "eager"
+            }
+          ]
+        }
+      </script>
+    </body>
+  </html>
+</Shell>

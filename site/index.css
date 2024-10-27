@@ -1,0 +1,60 @@
+html {
+  background-color: #2a2a2a;
+  color: white;
+  font-family:
+    system-ui,
+    Segoe UI,
+    Roboto,
+    sans-serif;
+}
+
+a {
+  all: unset;
+  color: white;
+}
+
+h1 {
+  font-size: 1.5rem;
+  font-weight: normal;
+}
+
+.rounded {
+  border-radius: 0.375em;
+}
+
+.link-underline,
+.link-underline-2 {
+  color: white;
+  position: relative;
+  cursor: pointer;
+}
+
+.link-underline::after,
+.link-underline-2::after {
+  content: "";
+  position: absolute;
+  background-color: white;
+  width: 0;
+  bottom: 0;
+  left: 0;
+  transition: all 0.2s;
+}
+
+.link-underline::after {
+  height: 1px;
+}
+
+.link-underline-2::after {
+  height: 0.125rem;
+}
+
+.link-underline:hover::after,
+.link-underline-2:hover::after {
+  width: 100%;
+}
+
+.nav {
+  display: flex;
+  gap: 2rem;
+  font-size: 1.25rem;
+}
