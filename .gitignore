@@ -1,2 +1,4 @@
 **/target
 build/
+/mincomp/Cargo.lock
+/wincomp/Cargo.lock

@@ -1,0 +1,52 @@
+<html lang="en">
+  <head>
+    <title>Corvus Prudens</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Corvus's personal site." />
+    <link rel="stylesheet" type="text/css" href="/output.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <a href="/" class="prerender-link link-underline-2 main-link"
+          >Corvus Prudens</a
+        >
+        <div class="nav">
+          <a href="/" class="prerender-link link-underline-2">Home</a>
+          <a href="/music" class="prerender-link link-underline-2">Music</a>
+          <a href="/blog" class="prerender-link link-underline-2">Blog</a>
+        </div>
+        <a class="button-link rounded" href target="_blank">GitHub </a>
+      </div>
+    </header>
+    <main>
+      <div class="test">
+        Hello, world! This is my site.
+        <a href="/music" class="prerender-link link-underline"
+          >here's a link!</a
+        >
+      </div>
+    </main>
+    <script type="speculationrules">
+      {
+        "prefetch": [
+          {
+            "where": { "selector_matches": ".prerender-link" },
+            "eagerness": "eager"
+          }
+        ],
+        "prerender": [
+          {
+            "where": { "selector_matches": ".prerender-link" },
+            "eagerness": "eager"
+          }
+        ]
+      }
+    </script>
+    <script>
+      const ws = new WebSocket(`ws://${location.host}/ws`);
+      ws.onmessage = () => location.reload();
+    </script>
+  </body>
+</html>

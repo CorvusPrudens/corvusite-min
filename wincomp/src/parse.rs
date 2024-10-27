@@ -1,7 +1,7 @@
 use crate::element::{Attribute, Element, Node};
 use winnow::{
     ascii::multispace0,
-    combinator::{alt, delimited, dispatch, opt, peek, preceded, repeat},
+    combinator::{alt, cut_err, delimited, dispatch, opt, peek, preceded, repeat},
     error::{AddContext, ContextError, ErrMode, StrContext, StrContextValue},
     stream::Stream,
     token::{any, take_until, take_while},
@@ -51,7 +51,7 @@ fn node<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
     let mut bracket_parser = alt((
         preceded(
             "<!--",
-            advance_to::<_, _, ContextError>("-->").map(|(text, _)| Node::Comment(text)),
+            advance_to_hint::<_, _, ContextError>("-->", '-').map(|(text, _)| Node::Comment(text)),
         ),
         preceded(peek("<"), element.map(Node::Element)),
     ));
@@ -60,7 +60,7 @@ fn node<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
         '<' => bracket_parser,
         _ => take_until(1.., '<').map(Node::Text)
     }
-    .context(StrContext::Label("Expected a tag or text"))
+    .context(StrContext::Label("tag or text"))
     .parse_next(input)
 }
 
@@ -105,6 +105,36 @@ where
     }
 }
 
+fn advance_to_hint<'s, P, O, E>(
+    mut parser: P,
+    hint: char,
+) -> impl FnMut(&mut &'s str) -> PResult<(&'s str, O)>
+where
+    P: Parser<&'s str, O, E>,
+{
+    move |input| {
+        let start = *input;
+        let checkpoint = input.checkpoint();
+
+        for (i, c) in input.char_indices() {
+            let new_input = &mut &input[i..];
+
+            if c == hint {
+                if let Ok(p) = parser.parse_next(new_input) {
+                    *input = new_input;
+                    return Ok((&start[..i], p));
+                }
+            }
+        }
+
+        Err(ErrMode::Cut(ContextError::default().add_context(
+            input,
+            &checkpoint,
+            StrContext::Expected(StrContextValue::Description("ending pattern")),
+        )))
+    }
+}
+
 pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
     '<'.parse_next(input)?;
 
@@ -120,7 +150,7 @@ pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
         }),
         ">" => match name {
             "script" | "style" => {
-                let (text, _) = advance_to(closing_tag(name)).parse_next(input)?;
+                let (text, _) = advance_to_hint(closing_tag(name), '<').parse_next(input)?;
 
                 Ok(Element {
                     name,
@@ -128,9 +158,18 @@ pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
                     children: vec![Node::Text(text)],
                 })
             }
+            "hr" | "input" | "link" | "img" => Ok(Element {
+                name,
+                attributes,
+                children: vec![],
+            }),
             _ => {
                 let nodes = nodes.parse_next(input)?;
-                closing_tag(name).parse_next(input)?;
+                cut_err(closing_tag(name))
+                    .context(StrContext::Expected(StrContextValue::Description(
+                        "closing tag",
+                    )))
+                    .parse_next(input)?;
 
                 Ok(Element {
                     name,
@@ -209,6 +248,8 @@ mod test {
     #[test]
     fn test_advance() {
         let js = r#"
+            let test = 1 < 2;
+
             document.querySelectorAll(".prerender-link").forEach((link) => {
                 link.addEventListener("mouseenter", () => {
                     addPrerenderRules(link.href);
@@ -217,7 +258,7 @@ mod test {
 
         let input = format!("{js}</script>");
 
-        let (string, _) = advance_to(closing_tag("script"))
+        let (string, _) = advance_to_hint(closing_tag("script"), '<')
             .parse_next(&mut input.as_str())
             .unwrap();
 
