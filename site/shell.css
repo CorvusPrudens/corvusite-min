@@ -18,6 +18,8 @@ header > div {
 
 main {
   max-width: 800px;
+  padding-left: 2rem;
+  padding-right: 2rem;
   margin-left: auto;
   margin-right: auto;
 }

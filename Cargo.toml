@@ -12,6 +12,7 @@ tower-http = { version = "0.5", features = [
   "fs",
   "compression-br",
   "compression-gzip",
+  "set-header",
 ] }
 notify-debouncer-full = "0.4"
 clap = { version = "4.4", features = ["derive"] }

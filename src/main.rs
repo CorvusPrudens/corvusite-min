@@ -1,5 +1,6 @@
 use axum::{
     extract::ws::{Message, WebSocket, WebSocketUpgrade},
+    http::{HeaderName, HeaderValue},
     response::IntoResponse,
     routing::get,
     Router,
@@ -12,7 +13,7 @@ use html5ever::{
 use mincomp::SharedDom;
 use notify_debouncer_full::{
     new_debouncer,
-    notify::{Event, EventKind, RecursiveMode},
+    notify::{recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode},
     DebounceEventResult, DebouncedEvent,
 };
 use std::{
@@ -22,7 +23,9 @@ use std::{
     sync::Arc,
 };
 use tokio::sync::broadcast;
-use tower_http::{compression::CompressionLayer, services::ServeDir};
+use tower_http::{
+    compression::CompressionLayer, services::ServeDir, set_header::SetResponseHeaderLayer,
+};
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -62,27 +65,56 @@ async fn main() {
     std::thread::spawn({
         let args = Arc::clone(&args);
         let tx = Arc::clone(&tx);
+        use notify_debouncer_full::notify::Watcher;
 
         move || {
-            let mut watcher = new_debouncer(std::time::Duration::from_millis(100), None, {
+            let mut watcher = notify_debouncer_full::notify::recommended_watcher({
                 let args = Arc::clone(&args);
-                move |res: DebounceEventResult| match res {
-                    Ok(events) => {
-                        if events
-                            .iter()
-                            .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
-                        {
+                move |res: Result<Event, _>| match res {
+                    Ok(event) => {
+                        if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
                             println!("updating files");
                             if let Err(e) = process_all_files(&args) {
                                 eprintln!("Error processing files: {}", e);
                             }
                             tx.send(()).unwrap_or(0);
                         }
+
+                        // if events
+                        //     .iter()
+                        //     .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
+                        // {
+                        //     println!("updating files");
+                        //     if let Err(e) = process_all_files(&args) {
+                        //         eprintln!("Error processing files: {}", e);
+                        //     }
+                        //     tx.send(()).unwrap_or(0);
+                        // }
                     }
                     Err(e) => println!("Watch error: {:?}", e),
                 }
             })
             .unwrap();
+
+            // let mut watcher = new_debouncer(std::time::Duration::from_millis(50), None, {
+            //     let args = Arc::clone(&args);
+            //     move |res: DebounceEventResult| match res {
+            //         Ok(events) => {
+            //             if events
+            //                 .iter()
+            //                 .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
+            //             {
+            //                 println!("updating files");
+            //                 if let Err(e) = process_all_files(&args) {
+            //                     eprintln!("Error processing files: {}", e);
+            //                 }
+            //                 tx.send(()).unwrap_or(0);
+            //             }
+            //         }
+            //         Err(e) => println!("Watch error: {:?}", e),
+            //     }
+            // })
+            // .unwrap();
 
             // Watch both HTML and static directories
             watcher
@@ -103,6 +135,10 @@ async fn main() {
         // Serve the build directory as the root
         .nest_service("/", ServeDir::new(&args.build))
         .layer(CompressionLayer::new().br(true).gzip(true))
+        .layer(SetResponseHeaderLayer::overriding(
+            HeaderName::from_static("cache-control"),
+            HeaderValue::from_static("no-store"),
+        ))
         // WebSocket route for hot reload
         .route("/ws", get(ws_handler))
         .with_state(tx);
@@ -131,7 +167,6 @@ async fn ws_handler(
 async fn handle_ws_client(mut socket: WebSocket, tx: Arc<broadcast::Sender<()>>) {
     let mut rx = tx.subscribe();
 
-    println!("upgraded");
     while rx.recv().await.is_ok() {
         println!("sent reload!");
         if socket
