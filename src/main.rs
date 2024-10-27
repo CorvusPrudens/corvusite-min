@@ -21,6 +21,7 @@ use std::{
     net::SocketAddr,
     path::{Path, PathBuf},
     sync::Arc,
+    time::Duration,
 };
 use tokio::sync::broadcast;
 use tower_http::{
@@ -68,28 +69,27 @@ async fn main() {
         use notify_debouncer_full::notify::Watcher;
 
         move || {
-            let mut watcher = notify_debouncer_full::notify::recommended_watcher({
+            let mut watcher = new_debouncer(Duration::from_millis(100), None, {
                 let args = Arc::clone(&args);
-                move |res: Result<Event, _>| match res {
-                    Ok(event) => {
-                        if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
-                            println!("updating files");
-                            if let Err(e) = process_all_files(&args) {
-                                eprintln!("Error processing files: {}", e);
-                            }
-                            tx.send(()).unwrap_or(0);
-                        }
-
-                        // if events
-                        //     .iter()
-                        //     .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
-                        // {
+                move |res: DebounceEventResult| match res {
+                    Ok(events) => {
+                        // if matches!(event.kind, EventKind::Modify(_) | EventKind::Create(_)) {
                         //     println!("updating files");
                         //     if let Err(e) = process_all_files(&args) {
                         //         eprintln!("Error processing files: {}", e);
                         //     }
                         //     tx.send(()).unwrap_or(0);
                         // }
+
+                        if events
+                            .iter()
+                            .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
+                        {
+                            if let Err(e) = process_all_files(&args) {
+                                eprintln!("Error processing files: {}", e);
+                            }
+                            tx.send(()).unwrap_or(0);
+                        }
                     }
                     Err(e) => println!("Watch error: {:?}", e),
                 }
@@ -224,9 +224,10 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
     let build_dir = Path::new(build_dir);
     let mut combined_css = Vec::new();
 
-    let mut components = Vec::new();
+    let start = std::time::Instant::now();
 
     // pass one
+    let mut component_entries = Vec::new();
     for entry in walkdir::WalkDir::new(src_dir)
         .into_iter()
         .filter_map(|f| match f {
@@ -238,10 +239,10 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
         let path_string = path.to_string_lossy();
 
         if path_string.ends_with(".mod.html") {
-            let dom = SharedDom::new();
+            component_entries.push(entry);
 
-            let file = fs_err::read_to_string(path)?;
-            components.push(file);
+            // let file = fs_err::read_to_string(path)?;
+            // components.push(file);
             // let mut dom = parse_document(
             //     dom,
             //     ParseOpts {
@@ -287,6 +288,12 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
         }
     }
 
+    let components = component_entries
+        .into_par_iter()
+        .map(|entry| fs_err::read_to_string(entry.path()))
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
     let components = components
         .par_iter()
         .map(|c| wincomp::Component::new(&c))
@@ -318,32 +325,37 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
         .par_iter()
         .map(|entry| {
             let path = entry.path();
-            let path_string = path.to_string_lossy();
 
-            if !path_string.ends_with(".mod.html") && path_string.ends_with(".html") {
-                let file = fs_err::read_to_string(path).unwrap();
-                let mut document = wincomp::Document::new(&file).unwrap();
-                document.expand(&components);
+            let file = fs_err::read_to_string(path).unwrap();
+            let mut document = wincomp::Document::new(&file).unwrap();
+            document.expand(&components);
 
-                let trimmed_entry = path.strip_prefix(src_dir).unwrap();
-                let outpath = build_dir.join(trimmed_entry);
+            let trimmed_entry = path.strip_prefix(src_dir).unwrap();
+            let outpath = build_dir.join(trimmed_entry);
 
-                if let Some(path) = outpath.parent() {
-                    fs_err::create_dir_all(path).unwrap();
-                }
-
-                let file = fs_err::OpenOptions::new()
-                    .write(true)
-                    .create(true)
-                    .open(outpath)
-                    .unwrap();
-                let mut writer = std::io::BufWriter::new(file);
-                document.write(&mut writer).unwrap();
+            if let Some(path) = outpath.parent() {
+                fs_err::create_dir_all(path).unwrap();
             }
+
+            let file = fs_err::OpenOptions::new()
+                .write(true)
+                .create(true)
+                .open(outpath)
+                .unwrap();
+            let mut writer = std::io::BufWriter::new(file);
+            document.write(&mut writer).unwrap();
         })
         .collect();
 
     fs_err::write(build_dir.join("output.css"), combined_css)?;
+
+    let elapsed = std::time::Instant::now() - start;
+
+    println!(
+        "Processed {} files in {}ms",
+        components.len() + paths.len(),
+        elapsed.as_millis()
+    );
 
     Ok(())
 }

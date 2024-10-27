@@ -1,0 +1,65 @@
+# GENERATED FILE!
+# Edit xtask/src/update.rs to maintain this file
+
+[package]
+name = "phosphor-leptos"
+version = "0.6.0"
+description = "phosphor icons for leptos"
+authors = ["Søren H. Hansen"]
+readme = "README.md"
+repository = "https://github.com/SorenHolstHansen/phosphor-leptos"
+keywords = ["icons", "leptos", "phosphor"]
+edition = "2021"
+license = "MIT"
+exclude = ["/core"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+leptos = "0.6"
+
+[workspace]
+members = ["xtask"]
+
+[features]
+default = ["all"]
+all = [
+	"arrows",
+	"brand",
+	"commerce",
+	"communication",
+	"design",
+	"development",
+	"editor",
+	"finance",
+	"games",
+	"health",
+	"map",
+	"media",
+	"nature",
+	"objects",
+	"office",
+	"people",
+	"system",
+	"uncategorized",
+	"weather"
+]
+arrows = []
+brand = []
+commerce = []
+communication = []
+design = []
+development = []
+editor = []
+finance = []
+games = []
+health = []
+map = []
+media = []
+nature = []
+objects = []
+office = []
+people = []
+system = []
+uncategorized = []
+weather = []

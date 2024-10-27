@@ -1,6 +1,5 @@
 .button-link {
   all: unset;
-  border: 1px solid #ffffff44;
   padding: 0.5rem;
   transition-property: background-color;
   transition-duration: 150ms;

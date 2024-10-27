@@ -79,19 +79,24 @@ impl<'s> Document<'s> {
             if let Some(component) = components.iter().find(|c| c.root.name == child.name) {
                 mutated = true;
                 let declared_attributes = &component.root.attributes;
+                let mut replacement_attributes = Vec::with_capacity(declared_attributes.len());
 
-                let mut filled_attributes = child.attributes.clone();
-                filled_attributes
-                    .retain(|a| declared_attributes.iter().any(|da| da.name == a.name));
+                for attribute in declared_attributes {
+                    if let Some(attr) = child.attributes.iter().find(|a| a.name == attribute.name) {
+                        replacement_attributes.push(*attr);
+                    } else {
+                        replacement_attributes.push(*attribute);
+                    }
+                }
 
                 let mut component_copy = component.root.clone();
 
+                // Assign properties
                 element::walk(&mut component_copy, &mut |element| {
                     for attr in element.attributes.iter_mut() {
-                        if let Some(value) = filled_attributes
-                            .iter()
-                            .find_map(|a| (a.name == attr.name).then_some(a.value))
-                        {
+                        if let Some(value) = replacement_attributes.iter().find_map(|a| {
+                            attr.value.is_some_and(|v| v == a.name).then_some(a.value)
+                        }) {
                             attr.value = value;
                         }
                     }
