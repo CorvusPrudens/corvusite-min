@@ -9,17 +9,22 @@
 
     <body>
       <header>
-        <div>
-          <a href="/" class="prerender-link link-underline-2 main-link"
-            >Corvus Prudens</a
+        <div class="main-link">
+          <a href="/" class="prerender-link link-underline-2">Corvus Prudens</a>
+        </div>
+
+        <nav>
+          <Navlink href="/">Home</Navlink>
+          <Navlink href="/about">About</Navlink>
+          <Navlink href="/blog">Blog</Navlink>
+        </nav>
+
+        <div class="header-button">
+          <ButtonLink
+            href="https://github.com/corvusprudens"
+            aria-label="GitHub"
           >
-          <div class="nav">
-            <Navlink href="/">Home</Navlink>
-            <Navlink href="/music">Music</Navlink>
-            <Navlink href="/blog">Blog</Navlink>
-          </div>
-          <ButtonLink href="https://github.com/corvusprudens">
-            <GithubLogoRegular fill="gray" />
+            <GithubLogoRegular fill="white" />
           </ButtonLink>
         </div>
       </header>
@@ -32,10 +37,16 @@
         © Corvus Prudens 2024
 
         <div class="link-group">
-          <ButtonLink href="https://youtube.com/CorvusPrudens">
+          <ButtonLink
+            href="https://youtube.com/CorvusPrudens"
+            aria-label="YouTube"
+          >
             <YoutubeLogoRegular fill="white" />
           </ButtonLink>
-          <ButtonLink href="https://soundcloud.com/corvusp">
+          <ButtonLink
+            href="https://soundcloud.com/corvusp"
+            aria-label="SoundCloud"
+          >
             <SoundcloudLogoRegular fill="white" />
           </ButtonLink>
         </div>

@@ -53,8 +53,16 @@ h1 {
   width: 100%;
 }
 
-.nav {
+.landing {
+  margin-left: auto;
+  margin-right: auto;
+  height: 100%;
+  flex: 1;
   display: flex;
-  gap: 2rem;
-  font-size: 1.25rem;
+  align-items: center;
+}
+
+.crow {
+  aspect-ratio: 1/1;
+  width: 300px;
 }

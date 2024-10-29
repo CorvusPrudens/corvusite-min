@@ -7,20 +7,24 @@ body {
 
 header {
   width: 100%;
+  box-sizing: border-box;
   display: flex;
   justify-content: center;
-}
-
-header > div {
-  display: flex;
-  flex-grow: 1;
   justify-content: space-between;
   align-items: center;
   max-width: 1200px;
-  margin-left: 2rem;
-  margin-right: 2rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  margin-left: auto;
+  margin-right: auto;
   margin-top: 1rem;
   margin-bottom: 1rem;
+}
+
+header nav {
+  display: flex;
+  gap: 2rem;
+  font-size: 1.25rem;
 }
 
 main {
@@ -36,10 +40,15 @@ main {
 }
 
 footer {
+  box-sizing: border-box;
+  max-width: 1200px;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  padding-left: 1rem;
-  padding-right: 1rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
   /*background-color: #3a3a3a;*/
   font-size: 0.9rem;
   display: flex;
@@ -50,6 +59,13 @@ footer {
 .main-link {
   font-size: 1.5rem;
   font-weight: normal;
+  width: 200px;
+}
+
+.header-button {
+  width: 200px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 .link-group {
