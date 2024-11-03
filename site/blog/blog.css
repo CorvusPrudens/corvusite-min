@@ -1,0 +1,43 @@
+.codeblock pre {
+  /*font-size: 0.899em;*/
+  border-radius: 0.375em;
+  padding: 1rem 1rem;
+  white-space: pre-wrap;
+  /*background-color: transparent !important;*/
+}
+
+article {
+  line-height: 1.3;
+}
+
+article h1 {
+  font-size: 2.25rem;
+  margin-top: 2.5rem;
+  margin-bottom: 2.5rem;
+  font-weight: bold;
+}
+
+article h2 {
+  font-size: 1.875rem;
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+  font-weight: bold;
+}
+
+article h3 {
+  font-size: 1.5rem;
+  margin-top: 1.75rem;
+  margin-bottom: 1.75rem;
+  font-weight: bold;
+}
+
+article p {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  color: #a9adc1;
+}
+
+article a {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}

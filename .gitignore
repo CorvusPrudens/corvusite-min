@@ -2,4 +2,5 @@
 build/
 /mincomp/Cargo.lock
 /wincomp/Cargo.lock
+/markcomp/Cargo.lock
 **/icons

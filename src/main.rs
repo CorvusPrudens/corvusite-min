@@ -6,27 +6,29 @@ use axum::{
     Router,
 };
 use clap::Parser;
-use html5ever::{
-    parse_document, tendril::TendrilSink, tokenizer::TokenizerOpts, tree_builder::TreeBuilderOpts,
-    ParseOpts,
-};
-use mincomp::SharedDom;
+use foldhash::HashMap;
+use lazy_comp::LazyComponents;
 use notify_debouncer_full::{
     new_debouncer,
-    notify::{recommended_watcher, Event, EventKind, RecommendedWatcher, RecursiveMode},
-    DebounceEventResult, DebouncedEvent,
+    notify::{EventKind, RecursiveMode},
+    DebounceEventResult,
 };
 use std::{
-    ffi::OsStr,
+    io::Write,
     net::SocketAddr,
-    path::{Path, PathBuf},
-    sync::Arc,
+    path::Path,
+    sync::{Arc, LazyLock},
     time::Duration,
 };
 use tokio::sync::broadcast;
 use tower_http::{
     compression::CompressionLayer, services::ServeDir, set_header::SetResponseHeaderLayer,
 };
+
+mod lazy_comp;
+
+static ICONS: LazyLock<LazyComponents<'static, foldhash::fast::RandomState>> =
+    LazyLock::new(|| lazy_comp::icons::<foldhash::fast::RandomState>());
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -66,10 +68,9 @@ async fn main() {
     std::thread::spawn({
         let args = Arc::clone(&args);
         let tx = Arc::clone(&tx);
-        use notify_debouncer_full::notify::Watcher;
 
         move || {
-            let mut watcher = new_debouncer(Duration::from_millis(100), None, {
+            let mut watcher = new_debouncer(Duration::from_millis(80), None, {
                 let args = Arc::clone(&args);
                 move |res: DebounceEventResult| match res {
                     Ok(events) => {
@@ -95,26 +96,6 @@ async fn main() {
                 }
             })
             .unwrap();
-
-            // let mut watcher = new_debouncer(std::time::Duration::from_millis(50), None, {
-            //     let args = Arc::clone(&args);
-            //     move |res: DebounceEventResult| match res {
-            //         Ok(events) => {
-            //             if events
-            //                 .iter()
-            //                 .any(|e| matches!(e.kind, EventKind::Modify(_) | EventKind::Create(_)))
-            //             {
-            //                 println!("updating files");
-            //                 if let Err(e) = process_all_files(&args) {
-            //                     eprintln!("Error processing files: {}", e);
-            //                 }
-            //                 tx.send(()).unwrap_or(0);
-            //             }
-            //         }
-            //         Err(e) => println!("Watch error: {:?}", e),
-            //     }
-            // })
-            // .unwrap();
 
             // Watch both HTML and static directories
             watcher
@@ -228,6 +209,7 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
 
     // pass one
     let mut component_entries = Vec::new();
+    let mut markdown_entries = Vec::new();
     for entry in walkdir::WalkDir::new(src_dir)
         .into_iter()
         .filter_map(|f| match f {
@@ -240,53 +222,14 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
 
         if path_string.ends_with(".mod.html") {
             component_entries.push(entry);
-
-            // let file = fs_err::read_to_string(path)?;
-            // components.push(file);
-            // let mut dom = parse_document(
-            //     dom,
-            //     ParseOpts {
-            //         tokenizer: TokenizerOpts {
-            //             exact_errors: true,
-            //             ..Default::default()
-            //         },
-            //         tree_builder: TreeBuilderOpts {
-            //             exact_errors: true,
-            //             ..Default::default()
-            //         },
-            //     },
-            // )
-            // .from_utf8()
-            // .read_from(&mut std::io::BufReader::new(file))
-            // .unwrap();
-
-            // let output = if path_string.ends_with(".mod.html") {
-            //     dom.make_component();
-            //     dom.output(false)
-            // } else {
-            //     dom.output(true)
-            // };
-
-            // let document = wincomp::Document::new(&file).unwrap();
-            // let trimmed_entry = path.strip_prefix(src_dir)?;
-            // let outpath = build_dir.join(trimmed_entry);
-            //
-            // if let Some(path) = outpath.parent() {
-            //     fs_err::create_dir_all(path)?;
-            // }
-            //
-            // let file = fs_err::OpenOptions::new()
-            //     .write(true)
-            //     .create(true)
-            //     .open(outpath)?;
-            // let mut writer = std::io::BufWriter::new(file);
-            // document.write(&mut writer).unwrap();
-
-            // fs_err::write(outpath, output.as_bytes())?;
         } else if path_string.ends_with(".css") {
             combined_css.extend(fs_err::read(path)?);
+        } else if path_string.ends_with(".md") {
+            markdown_entries.push(entry);
         }
     }
+
+    use rayon::prelude::*;
 
     let components = component_entries
         .into_par_iter()
@@ -296,13 +239,11 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
 
     let components = components
         .par_iter()
-        .map(|c| wincomp::Component::new(&c))
-        .collect::<Result<Vec<_>, _>>()
+        .map(|c| wincomp::Component::new(c).map(|c| (c.root.name, c)))
+        .collect::<Result<HashMap<_, _>, _>>()
         .unwrap();
 
-    use rayon::prelude::*;
-
-    let paths: Vec<_> = walkdir::WalkDir::new(src_dir)
+    let mut paths: Vec<_> = walkdir::WalkDir::new(src_dir)
         .into_iter()
         .filter_map(|f| match f {
             Ok(f) => {
@@ -311,7 +252,7 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
                 } else {
                     let string = f.path().to_string_lossy();
                     if !string.ends_with(".mod.html") && string.ends_with(".html") {
-                        Some(f)
+                        Some(f.path().to_owned())
                     } else {
                         None
                     }
@@ -321,31 +262,64 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
         })
         .collect();
 
-    let results: Vec<_> = paths
-        .par_iter()
+    let blog_build_dir = build_dir.join("blog-build");
+    let _ = markdown_entries
+        .into_iter()
         .map(|entry| {
             let path = entry.path();
-
-            let file = fs_err::read_to_string(path).unwrap();
-            let mut document = wincomp::Document::new(&file).unwrap();
-            document.expand(&components);
+            let markdown = fs_err::read_to_string(path)?;
+            let document = markcomp::mdast::document(&mut markdown.as_str()).unwrap();
 
             let trimmed_entry = path.strip_prefix(src_dir).unwrap();
+            let outpath = blog_build_dir.join(trimmed_entry);
+
+            let base = outpath.parent().unwrap();
+            let sans_extension = outpath.file_stem().unwrap();
+            let outpath = base.join(sans_extension).join("index.html");
+            paths.push(outpath.to_owned());
+
+            if let Some(path) = outpath.parent() {
+                fs_err::create_dir_all(path)?;
+            }
+
+            let mut output = Vec::new();
+            write!(&mut output, "<Shell><article>");
+            for node in document {
+                node.write(&mut output).unwrap();
+            }
+            write!(&mut output, "</article></Shell>");
+            fs_err::write(outpath, output)
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
+
+    let _ = paths
+        .par_iter()
+        .map(|path| {
+            let file = fs_err::read_to_string(path)?;
+
+            let mut document = match wincomp::Document::new(&file) {
+                Ok(d) => d,
+                Err(e) => panic!("{e}"),
+            };
+            document.expand(|name| components.get(name), |name| (&*ICONS).get(name));
+
+            let trimmed_entry = if path.starts_with(src_dir) {
+                path.strip_prefix(src_dir).unwrap()
+            } else {
+                path.strip_prefix(&blog_build_dir).unwrap()
+            };
             let outpath = build_dir.join(trimmed_entry);
 
             if let Some(path) = outpath.parent() {
-                fs_err::create_dir_all(path).unwrap();
+                fs_err::create_dir_all(path)?;
             }
 
-            let file = fs_err::OpenOptions::new()
-                .write(true)
-                .create(true)
-                .open(outpath)
-                .unwrap();
-            let mut writer = std::io::BufWriter::new(file);
-            document.write(&mut writer).unwrap();
+            let mut buffer = Vec::new();
+            document.write(&mut buffer)?;
+            fs_err::write(outpath, buffer)
         })
-        .collect();
+        .collect::<Result<Vec<_>, _>>()?;
 
     fs_err::write(build_dir.join("output.css"), combined_css)?;
 

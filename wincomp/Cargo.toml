@@ -7,7 +7,7 @@ edition = "2021"
 winnow = { version = "0.6", features = ["simd"] }
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.5"
 
 [[bench]]
 name = "bench"

@@ -8,7 +8,7 @@ use winnow::{
     PResult, Parser,
 };
 
-fn identifier<'s>(input: &mut &'s str) -> PResult<&'s str> {
+pub fn identifier<'s>(input: &mut &'s str) -> PResult<&'s str> {
     any.verify(|c: &char| c.is_alphabetic())
         .parse_peek(*input)?;
 
@@ -48,13 +48,16 @@ fn attribute<'s>(input: &mut &'s str) -> PResult<Attribute<'s>> {
 }
 
 fn node<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
-    let mut bracket_parser = alt((
-        preceded(
-            "<!--",
-            advance_to_hint::<_, _, ContextError>("-->", '-').map(|(text, _)| Node::Comment(text)),
-        ),
-        preceded(peek("<"), element.map(Node::Element)),
-    ));
+    let mut bracket_parser = preceded(
+        multispace0,
+        alt((
+            preceded(
+                "<!--",
+                advance_to::<_, _, ContextError>("-->", '-').map(|(text, _)| Node::Comment(text)),
+            ),
+            preceded(peek("<"), element.map(Node::Element)),
+        )),
+    );
 
     dispatch! {peek(any);
         '<' => bracket_parser,
@@ -65,47 +68,18 @@ fn node<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
 }
 
 pub(crate) fn nodes<'s>(input: &mut &'s str) -> PResult<Vec<Node<'s>>> {
-    repeat(0.., delimited(multispace0, node, multispace0)).parse_next(input)
+    repeat(0.., node).parse_next(input)
 }
 
 fn closing_tag<'a>(name: &'a str) -> impl Fn(&mut &str) -> PResult<()> + 'a {
     move |input| {
-        (
-            preceded(multispace0, "</"),
-            delimited(multispace0, name, multispace0),
-            ">",
-        )
+        ("</", delimited(multispace0, name, multispace0), ">")
             .map(|_| ())
             .parse_next(input)
     }
 }
 
-fn advance_to<'s, P, O, E>(mut parser: P) -> impl FnMut(&mut &'s str) -> PResult<(&'s str, O)>
-where
-    P: Parser<&'s str, O, E>,
-{
-    move |input| {
-        let start = *input;
-        let checkpoint = input.checkpoint();
-
-        for (i, _) in input.char_indices() {
-            let new_input = &mut &input[i..];
-
-            if let Ok(p) = parser.parse_next(new_input) {
-                *input = new_input;
-                return Ok((&start[..i], p));
-            }
-        }
-
-        Err(ErrMode::Cut(ContextError::default().add_context(
-            input,
-            &checkpoint,
-            StrContext::Expected(StrContextValue::Description("ending pattern")),
-        )))
-    }
-}
-
-fn advance_to_hint<'s, P, O, E>(
+pub fn advance_to<'s, P, O, E>(
     mut parser: P,
     hint: char,
 ) -> impl FnMut(&mut &'s str) -> PResult<(&'s str, O)>
@@ -135,7 +109,7 @@ where
     }
 }
 
-pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
+pub fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
     '<'.parse_next(input)?;
 
     let name = identifier.parse_next(input)?;
@@ -150,7 +124,7 @@ pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
         }),
         ">" => match name {
             "script" | "style" => {
-                let (text, _) = advance_to_hint(closing_tag(name), '<').parse_next(input)?;
+                let (text, _) = advance_to(closing_tag(name), '<').parse_next(input)?;
 
                 Ok(Element {
                     name,
@@ -165,7 +139,7 @@ pub(crate) fn element<'s>(input: &mut &'s str) -> PResult<Element<'s>> {
             }),
             _ => {
                 let nodes = nodes.parse_next(input)?;
-                cut_err(closing_tag(name))
+                cut_err(preceded(multispace0, closing_tag(name)))
                     .context(StrContext::Expected(StrContextValue::Description(
                         "closing tag",
                     )))
@@ -258,10 +232,18 @@ mod test {
 
         let input = format!("{js}</script>");
 
-        let (string, _) = advance_to_hint(closing_tag("script"), '<')
+        let (string, _) = advance_to(closing_tag("script"), '<')
             .parse_next(&mut input.as_str())
             .unwrap();
 
         assert_eq!(string, js);
+    }
+
+    #[test]
+    fn test_small_component() {
+        let mut component = "<Test>\n    <children />\n</Test>";
+
+        let component = nodes.parse_next(&mut component);
+        panic!("{component:#?}");
     }
 }

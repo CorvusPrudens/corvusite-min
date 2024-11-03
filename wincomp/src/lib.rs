@@ -1,7 +1,8 @@
 use crate::element::{Element, Node};
+use std::{collections::HashMap, hash::BuildHasher, ops::Deref};
 use winnow::{
     ascii::multispace0,
-    combinator::delimited,
+    combinator::{delimited, terminated},
     error::{ContextError, ParseError},
     Parser,
 };
@@ -27,48 +28,31 @@ impl<'s> Component<'s> {
 
 impl<'s> Document<'s> {
     pub fn new(mut source: &'s str) -> Result<Self, ParseError<&'s str, ContextError>> {
-        let nodes = parse::nodes.parse(&mut source)?;
+        let nodes = terminated(parse::nodes, multispace0).parse(&mut source)?;
 
         Ok(Self { nodes })
     }
 
-    pub fn expand(&mut self, components: &[Component<'s>]) {
+    pub fn expand<F, G, O>(&mut self, mut components: F, icons: G)
+    where
+        F: FnMut(&str) -> Option<&Component<'s>>,
+        G: Fn(&str) -> Option<O>,
+        O: Deref<Target = Component<'s>>,
+    {
         loop {
-            if !Self::expand_recurse(&mut self.nodes, components) {
+            if !Self::expand_recurse(&mut self.nodes, &mut components, &icons) {
                 break;
             }
         }
     }
 
-    fn expand_recurse(nodes: &mut Vec<Node<'s>>, components: &[Component<'s>]) -> bool {
+    fn expand_recurse<F, G, O>(nodes: &mut Vec<Node<'s>>, components: &mut F, icons: &G) -> bool
+    where
+        F: FnMut(&str) -> Option<&Component<'s>>,
+        G: Fn(&str) -> Option<O>,
+        O: Deref<Target = Component<'s>>,
+    {
         let mut mutated = false;
-        // if let Some(component) = components.iter().find(|c| c.name == element.name) {
-        //     mutated = true;
-        //     let mut children = std::mem::take(&mut element.children);
-        //     *element = component.clone();
-        //     element.name = "div";
-        //
-        //     let mut index = 0;
-        //     let outlet = element::find_mut(element, &mut |el| {
-        //         if let Some(i) = el
-        //             .children
-        //             .iter()
-        //             .filter_map(|c| c.element())
-        //             .position(|p| p.name == "children")
-        //         {
-        //             index = i;
-        //             true
-        //         } else {
-        //             false
-        //         }
-        //     });
-        //
-        //     if let Some(outlet) = outlet {
-        //         outlet.children.remove(index);
-        //         outlet.children.append(&mut children)
-        //     }
-        // }
-
         let mut index = 0;
         while index < nodes.len() {
             let Some(child) = nodes[index].element_mut() else {
@@ -76,7 +60,15 @@ impl<'s> Document<'s> {
                 continue;
             };
 
-            if let Some(component) = components.iter().find(|c| c.root.name == child.name) {
+            let icon;
+            let component = if let Some(component) = components(&child.name) {
+                Some(component)
+            } else {
+                icon = icons(&child.name);
+                icon.as_deref()
+            };
+
+            if let Some(component) = component {
                 mutated = true;
                 let declared_attributes = &component.root.attributes;
                 let mut replacement_attributes = Vec::with_capacity(declared_attributes.len());
@@ -106,12 +98,13 @@ impl<'s> Document<'s> {
 
                 let mut inner_index = 0;
                 let outlet = element::find_mut(&mut component_copy, &mut |el| {
-                    if let Some(i) = el
-                        .children
-                        .iter()
-                        .filter_map(|c| c.element())
-                        .position(|p| p.name == "children")
-                    {
+                    if let Some(i) = el.children.iter().enumerate().find_map(|(i, c)| {
+                        if c.element().is_some_and(|e| e.name == "children") {
+                            Some(i)
+                        } else {
+                            None
+                        }
+                    }) {
                         inner_index = i;
                         true
                     } else {
@@ -137,85 +130,51 @@ impl<'s> Document<'s> {
                 continue;
             };
 
-            mutated |= Self::expand_recurse(&mut child.children, components);
+            mutated |= Self::expand_recurse(&mut child.children, components, icons);
 
             index += 1;
         }
-
-        // for child in element.children.iter_mut().filter_map(|c| c.element_mut()) {
-        //     if let Some(component) = components.iter().find(|c| c.name == child.name) {
-        //         mutated = true;
-        //         let mut children = std::mem::take(&mut element.children);
-        //         *element = component.clone();
-        //         element.name = "div";
-        //
-        //         let mut index = 0;
-        //         let outlet = element::find_mut(element, &mut |el| {
-        //             if let Some(i) = el
-        //                 .children
-        //                 .iter()
-        //                 .filter_map(|c| c.element())
-        //                 .position(|p| p.name == "children")
-        //             {
-        //                 index = i;
-        //                 true
-        //             } else {
-        //                 false
-        //             }
-        //         });
-        //
-        //         if let Some(outlet) = outlet {
-        //             outlet.children.remove(index);
-        //             outlet.children.append(&mut children)
-        //         }
-        //     }
-        //
-        //     mutated |= Self::expand_recurse(child, components);
-        // }
 
         mutated
     }
 }
 
+impl Element<'_> {
+    pub fn write<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
+        write!(writer, "<{}", self.name)?;
+
+        for attribute in self.attributes.iter() {
+            write!(writer, " {}", attribute.name)?;
+
+            if let Some(value) = attribute.value {
+                write!(writer, r#"="{value}""#)?;
+            }
+        }
+
+        if self.children.is_empty() {
+            write!(writer, "/>")?;
+        } else {
+            write!(writer, ">")?;
+
+            Document::write_element(writer, &self.children)?;
+
+            write!(writer, "</{}>", self.name)?;
+        }
+
+        Ok(())
+    }
+}
+
 impl Document<'_> {
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> std::io::Result<()> {
-        writer.write("<!DOCTYPE html>".as_bytes())?;
-        self.write_element(writer, &self.nodes)
+        write!(writer, "<!DOCTYPE html>")?;
+        Self::write_element(writer, &self.nodes)
     }
 
-    fn write_element<W: std::io::Write>(
-        &self,
-        writer: &mut W,
-        nodes: &[Node<'_>],
-    ) -> std::io::Result<()> {
+    fn write_element<W: std::io::Write>(writer: &mut W, nodes: &[Node<'_>]) -> std::io::Result<()> {
         for node in nodes {
             match node {
-                Node::Element(element) => {
-                    writer.write(&[b'<'])?;
-                    writer.write(element.name.as_bytes())?;
-
-                    for attribute in element.attributes.iter() {
-                        writer.write(&[b' '])?;
-                        writer.write(attribute.name.as_bytes())?;
-                        if let Some(value) = attribute.value {
-                            writer.write(r#"=""#.as_bytes())?;
-                            writer.write(value.as_bytes())?;
-                            writer.write(&[b'"'])?;
-                        }
-                    }
-
-                    if element.children.is_empty() {
-                        writer.write("/>".as_bytes())?;
-                    } else {
-                        writer.write(&[b'>'])?;
-
-                        self.write_element(writer, &element.children)?;
-
-                        writer.write("</".as_bytes())?;
-                        writer.write(element.name.as_bytes())?;
-                        writer.write(&[b'>'])?;
-                    }
-                }
+                Node::Element(element) => element.write(writer)?,
                 Node::Text(t) => {
                     writer.write(t.as_bytes())?;
                 }

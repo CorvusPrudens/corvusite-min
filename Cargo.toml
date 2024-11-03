@@ -4,8 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-mincomp = { path = "mincomp" }
-html5ever = "0.29"
 axum = { version = "0.7", features = ["ws"] }
 tokio = { version = "1.0", features = ["full"] }
 tower-http = { version = "0.5", features = [
@@ -20,9 +18,17 @@ walkdir = "2.5"
 fs-err = "3.0"
 wincomp = { path = "wincomp" }
 rayon = "1.10"
+markcomp = { path = "./markcomp" }
+foldhash = "0.1"
 
 [profile.dev.package."*"]
 opt-level = 3
 
-[profile.dev.package.mincomp]
+[profile.dev.package.wincomp]
 opt-level = 0
+
+[build-dependencies]
+regex = "1.11"
+quote = "1.0.36"
+proc-macro2 = { version = "1.0.84", default-features = false }
+convert_case = "0.6.0"
