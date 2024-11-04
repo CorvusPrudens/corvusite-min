@@ -1,7 +1,7 @@
 use wincomp::element::Element;
 use winnow::{
     ascii::{line_ending, multispace0, space0},
-    combinator::{alt, delimited, fail, opt, peek, preceded, repeat, repeat_till, terminated},
+    combinator::{delimited, fail, opt, peek, preceded, repeat, terminated},
     error::{AddContext, ContextError, ErrMode, ParseError, StrContext, StrContextValue},
     stream::{Accumulate, ContainsToken, Stream},
     token::{any, take_until, take_while},
@@ -72,55 +72,55 @@ pub struct NodeId(u16);
 
 #[derive(Debug)]
 pub struct FootnoteDefinition<'s> {
-    children: NodeVec,
-    identifier: &'s str,
-    label: Option<&'s str>,
+    pub children: NodeVec,
+    pub identifier: &'s str,
+    pub label: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct List {
-    children: NodeVec,
-    start: Option<u32>,
-    spread: bool,
+    pub children: NodeVec,
+    pub start: Option<u32>,
+    pub spread: bool,
 }
 
 #[derive(Debug)]
 pub struct FootnoteReference<'s> {
-    identifier: &'s str,
-    label: Option<&'s str>,
+    pub identifier: &'s str,
+    pub label: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Image<'s> {
-    alt: &'s str,
-    url: &'s str,
-    title: Option<&'s str>,
+    pub alt: &'s str,
+    pub url: &'s str,
+    pub title: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Link<'s> {
-    children: NodeVec,
-    url: &'s str,
-    title: Option<&'s str>,
+    pub children: NodeVec,
+    pub url: &'s str,
+    pub title: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Code<'s> {
-    value: &'s str,
-    lang: Option<&'s str>,
-    meta: Option<&'s str>,
+    pub value: &'s str,
+    pub lang: Option<&'s str>,
+    pub meta: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Math<'s> {
-    value: &'s str,
-    meta: Option<&'s str>,
+    pub value: &'s str,
+    pub meta: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Heading {
-    children: NodeVec,
-    depth: u8,
+    pub children: NodeVec,
+    pub depth: u8,
 }
 
 #[derive(Debug)]

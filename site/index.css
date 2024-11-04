@@ -6,6 +6,7 @@ html {
     Segoe UI,
     Roboto,
     sans-serif;
+  scrollbar-gutter: stable;
 }
 
 a {

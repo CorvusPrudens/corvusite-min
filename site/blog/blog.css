@@ -11,16 +11,16 @@ article {
 }
 
 article h1 {
-  font-size: 2.25rem;
-  margin-top: 2.5rem;
-  margin-bottom: 2.5rem;
+  font-size: 2rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
   font-weight: bold;
 }
 
 article h2 {
-  font-size: 1.875rem;
-  margin-top: 1.75rem;
-  margin-bottom: 1.75rem;
+  font-size: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
   font-weight: bold;
 }
 
@@ -37,7 +37,7 @@ article p {
   color: #a9adc1;
 }
 
-article a {
-  text-decoration: underline;
-  text-decoration-style: dotted;
-}
+/*article a {*/
+/*  text-decoration: underline;*/
+/*  text-decoration-style: dotted;*/
+/*}*/

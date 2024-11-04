@@ -28,7 +28,7 @@ use tower_http::{
 mod lazy_comp;
 
 static ICONS: LazyLock<LazyComponents<'static, foldhash::fast::RandomState>> =
-    LazyLock::new(|| lazy_comp::icons::<foldhash::fast::RandomState>());
+    LazyLock::new(lazy_comp::icons::<foldhash::fast::RandomState>);
 
 #[derive(Parser, Debug, Clone)]
 #[command(author, version, about, long_about = None)]
@@ -70,7 +70,7 @@ async fn main() {
         let tx = Arc::clone(&tx);
 
         move || {
-            let mut watcher = new_debouncer(Duration::from_millis(80), None, {
+            let mut watcher = new_debouncer(Duration::from_millis(150), None, {
                 let args = Arc::clone(&args);
                 move |res: DebounceEventResult| match res {
                     Ok(events) => {
@@ -125,7 +125,7 @@ async fn main() {
         .with_state(tx);
 
     // Start the server
-    let addr = SocketAddr::from(([127, 0, 0, 1], args.port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], args.port));
     println!("Server running on http://{}", addr);
     println!("  Static files directory: {}", args.static_dir);
     println!("  HTML files directory: {}", args.site);
@@ -267,8 +267,9 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
         .into_iter()
         .map(|entry| {
             let path = entry.path();
-            let markdown = fs_err::read_to_string(path)?;
-            let document = markcomp::mdast::document(&mut markdown.as_str()).unwrap();
+
+            let markdown = fs_err::read(path)?;
+            // let document = markcomp::mdast::document(&mut markdown.as_str()).unwrap();
 
             let trimmed_entry = path.strip_prefix(src_dir).unwrap();
             let outpath = blog_build_dir.join(trimmed_entry);
@@ -283,11 +284,10 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
             }
 
             let mut output = Vec::new();
-            write!(&mut output, "<Shell><article>");
-            for node in document {
-                node.write(&mut output).unwrap();
-            }
-            write!(&mut output, "</article></Shell>");
+            let mut markdown = markcomp::visitor::SimpleVisitor::new(&markdown).output();
+            write!(&mut output, "<Shell><article>").unwrap();
+            output.append(&mut markdown);
+            write!(&mut output, "</article></Shell>").unwrap();
             fs_err::write(outpath, output)
         })
         .collect::<Result<Vec<_>, _>>()
@@ -302,7 +302,7 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
                 Ok(d) => d,
                 Err(e) => panic!("{e}"),
             };
-            document.expand(|name| components.get(name), |name| (&*ICONS).get(name));
+            document.expand(|name| components.get(name), |name| ICONS.get(name));
 
             let trimmed_entry = if path.starts_with(src_dir) {
                 path.strip_prefix(src_dir).unwrap()
@@ -326,9 +326,9 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Box<dyn std::error
     let elapsed = std::time::Instant::now() - start;
 
     println!(
-        "Processed {} files in {}ms",
+        "Processed {} files in {}us",
         components.len() + paths.len(),
-        elapsed.as_millis()
+        elapsed.as_micros()
     );
 
     Ok(())

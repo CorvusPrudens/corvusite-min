@@ -173,28 +173,32 @@ impl<'s> Node<'s> {
             }
             Self::Text(t) => {
                 html_encode(t, writer)?;
+                write!(writer, " ")?;
             }
             Self::Code(Code { value, lang, meta }) => {
-                let lang = lang.expect("Language required for syntax highlighting");
-
-                write!(writer, r#"<div class="codeblock">"#)?;
                 let set = syntect::parsing::SyntaxSet::load_defaults_newlines();
-                let reference = set
-                    .find_syntax_by_extension(lang)
-                    .expect(&format!("\"{lang}\" is not supported by syntect"));
 
-                let theme = include_bytes!("../themes/kanagawa.tmTheme");
-                let theme = syntect::highlighting::ThemeSet::load_from_reader(
-                    &mut std::io::Cursor::new(theme),
-                )
-                .unwrap();
+                match lang.and_then(|lang| set.find_syntax_by_extension(lang)) {
+                    Some(lang) => {
+                        write!(writer, r#"<div class="codeblock">"#)?;
 
-                let output =
-                    syntect::html::highlighted_html_for_string(&value, &set, &reference, &theme)
+                        let theme = include_bytes!("../themes/kanagawa.tmTheme");
+                        let theme = syntect::highlighting::ThemeSet::load_from_reader(
+                            &mut std::io::Cursor::new(theme),
+                        )
                         .unwrap();
 
-                write!(writer, "{}", output)?;
-                write!(writer, "</div>")?;
+                        let output =
+                            syntect::html::highlighted_html_for_string(&value, &set, &lang, &theme)
+                                .unwrap();
+
+                        write!(writer, "{}", output)?;
+                        write!(writer, "</div>")?;
+                    }
+                    None => {
+                        write!(writer, "<blockquote>{}</blockquote>", value)?;
+                    }
+                }
             }
             Self::Heading(Heading { children, depth }) => {
                 write!(writer, "<h{}>", depth)?;
@@ -332,7 +336,7 @@ fn top<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
 
     let node = match result {
         Ok(n) => n,
-        Err(ErrMode::Backtrack(_)) => terminated(paragraph(('\r', '\n')), multispace0)
+        Err(ErrMode::Backtrack(_)) => terminated(top_paragraph, multispace0)
             .map(Node::Paragraph)
             .parse_next(input)?,
         Err(e) => return Err(e),
@@ -377,6 +381,25 @@ fn inline_node<'s>(input: &mut &'s str) -> PResult<Node<'s>> {
         _ => fail::<_, Node, _>,
     }
     .parse_next(input)
+}
+
+fn top_paragraph<'s>(input: &mut &'s str) -> PResult<Vec<Node<'s>>> {
+    let mut nodes = Vec::new();
+    loop {
+        let mut p = terminated(paragraph(('\r', '\n')), opt(line_ending)).parse_next(input)?;
+        nodes.append(&mut p);
+
+        if peek::<_, _, (), _>(alt(("~~~", "---", "```", "#", "$$")))
+            .parse_next(input)
+            .is_ok()
+            || peek::<_, _, (), _>(line_ending).parse_next(input).is_ok()
+            || input.is_empty()
+        {
+            break;
+        }
+    }
+
+    Ok(nodes)
 }
 
 fn paragraph<C>(termination: C) -> impl for<'s> FnMut(&mut &'s str) -> PResult<Vec<Node<'s>>>
@@ -469,7 +492,7 @@ How are `you` doing?
 
         let result = document.parse(&mut input);
 
-        panic!("{result:#?}");
+        // panic!("{result:#?}");
 
         match result {
             Ok(r) => assert_eq!(r.len(), 3),
