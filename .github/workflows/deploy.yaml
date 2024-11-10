@@ -39,7 +39,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: corvusprudens.com
+      url: "https://corvusprudens.com"
     runs-on: ubuntu-latest
 
     permissions:
