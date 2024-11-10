@@ -4,3 +4,4 @@ build/
 /wincomp/Cargo.lock
 /markcomp/Cargo.lock
 **/icons
+/.cargo/config.toml
