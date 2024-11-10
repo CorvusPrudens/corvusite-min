@@ -1,55 +1,14 @@
 use convert_case::{Case, Casing};
-use proc_macro2::TokenStream;
-use quote::{format_ident, quote};
+use quote::quote;
 use regex::Regex;
-use std::collections::{BTreeMap, HashMap};
 use std::path::Path;
-use std::{env, fs, process, rc::Rc};
+use std::{env, fs, rc::Rc};
 
-fn extract_categories(input: &str) -> (HashMap<String, Vec<String>>, BTreeMap<String, ()>) {
-    let mut icon_categories: HashMap<String, Vec<String>> = HashMap::new();
-    let mut categories_set: BTreeMap<String, ()> = BTreeMap::new();
-
-    let re = Regex::new(r#"(?m)^\s*name:\s*"(.+)",\n.*\n\s*categories:\s*\[([^]]+)\]"#).unwrap();
-
-    for cap in re.captures_iter(input) {
-        let name = cap[1].to_string();
-        let has_categories = cap[2]
-            .split(',')
-            .filter(|category| !category.trim().is_empty())
-            .map(|category| {
-                let value = category
-                    .trim()
-                    .split('.')
-                    .nth(1)
-                    .unwrap()
-                    .to_lowercase()
-                    .to_string();
-                categories_set.insert(value.clone(), ());
-                value
-            })
-            .collect::<Vec<String>>();
-
-        icon_categories.insert(name, has_categories);
-    }
-    // Insert the Uncategorized category for icons that are not in the TS export file
-    categories_set.insert("uncategorized".to_string(), ());
-    (icon_categories, categories_set)
-}
-
-const OUTPUT_DIR: &str = "icons";
 const ASSETS_DIR: &str = "phosphor-icons/core/assets";
-const TYPESCRIPT_EXPORT_FILE: &str = "phosphor-icons/core/src/icons.ts";
 
 pub fn run() -> impl Iterator<Item = (String, String)> {
     let svg_tag_regex: &_ = Box::leak(Box::new(Regex::new(r"<svg.*?>").unwrap()));
     let svg_closing_tag_regex: &_ = Box::leak(Box::new(Regex::new(r"</svg>").unwrap()));
-
-    // Extract the categories from the typescript export file
-    let (icon_categories, categories_set) =
-        extract_categories(fs::read_to_string(TYPESCRIPT_EXPORT_FILE).unwrap().as_str());
-
-    let uncategorized = vec!["uncategorized".into()];
 
     // Get a list of all the icon weights
     let mut weights: Vec<_> = fs::read_dir(ASSETS_DIR)
@@ -77,17 +36,11 @@ pub fn run() -> impl Iterator<Item = (String, String)> {
         .collect();
 
     // We'll also sort the file names so each generation run has a
-    // stable order. This should improve `src/mod.rs` diffs.
+    // stable order.
     file_names.sort_unstable();
 
     file_names.into_iter().flat_map(move |file_name| {
         let icon_name: Rc<str> = Rc::from(file_name.strip_suffix(".svg").unwrap());
-
-        //derive the feature set string for this icon from its mappings.
-        //If we haven't been able to match the icon's category, assign in to 'Uncategorized'
-        let features = icon_categories
-            .get(icon_name.as_ref())
-            .unwrap_or(&uncategorized);
 
         let icon_weights = weights.iter().map({
             let icon_name = Rc::clone(&icon_name);

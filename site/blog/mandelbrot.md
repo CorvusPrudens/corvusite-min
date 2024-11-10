@@ -1,6 +1,8 @@
 ---
 title: Mandelbrot Fractal
 date: 10/2/23
+description: |
+  A little exploration of the famous fractal.
 ---
 
 # The Mandelbrot Fractal

@@ -1,7 +1,7 @@
 use wincomp::element::Element;
 use winnow::{
     ascii::{line_ending, multispace0, space0},
-    combinator::{alt, delimited, fail, opt, peek, preceded, repeat, repeat_till, terminated},
+    combinator::{alt, delimited, fail, opt, peek, preceded, repeat, terminated},
     error::{AddContext, ContextError, ErrMode, StrContext},
     stream::{ContainsToken, Stream},
     token::{any, take_until, take_while},
@@ -10,55 +10,55 @@ use winnow::{
 
 #[derive(Debug)]
 pub struct FootnoteDefinition<'s> {
-    children: Vec<Node<'s>>,
-    identifier: &'s str,
-    label: Option<&'s str>,
+    pub children: Vec<Node<'s>>,
+    pub identifier: &'s str,
+    pub label: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct List<'s> {
-    children: Vec<Node<'s>>,
-    start: Option<u32>,
-    spread: bool,
+    pub children: Vec<Node<'s>>,
+    pub start: Option<u32>,
+    pub spread: bool,
 }
 
 #[derive(Debug)]
 pub struct FootnoteReference<'s> {
-    identifier: &'s str,
-    label: Option<&'s str>,
+    pub identifier: &'s str,
+    pub label: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Image<'s> {
-    alt: &'s str,
-    url: &'s str,
-    title: Option<&'s str>,
+    pub alt: &'s str,
+    pub url: &'s str,
+    pub title: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Link<'s> {
-    children: Vec<Node<'s>>,
-    url: &'s str,
-    title: Option<&'s str>,
+    pub children: Vec<Node<'s>>,
+    pub url: &'s str,
+    pub title: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Code<'s> {
-    value: &'s str,
-    lang: Option<&'s str>,
-    meta: Option<&'s str>,
+    pub value: &'s str,
+    pub lang: Option<&'s str>,
+    pub meta: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Math<'s> {
-    value: &'s str,
-    meta: Option<&'s str>,
+    pub value: &'s str,
+    pub meta: Option<&'s str>,
 }
 
 #[derive(Debug)]
 pub struct Heading<'s> {
-    children: Vec<Node<'s>>,
-    depth: u8,
+    pub children: Vec<Node<'s>>,
+    pub depth: u8,
 }
 
 #[derive(Debug)]
@@ -150,13 +150,13 @@ impl<'s> Node<'s> {
             }
             Self::TextExpression(_) => {}
             Self::Html(el) => el.write(writer)?,
-            Self::Image(Image { alt, url, title }) => {
+            Self::Image(Image { alt, url, title: _ }) => {
                 write!(writer, r#"<img href="{url}" alt="{alt}" />"#)?;
             }
             Self::Link(Link {
                 children,
                 url,
-                title,
+                title: _,
             }) => {
                 write!(writer, r#"<a href="{url}">"#)?;
                 for child in children {
@@ -175,7 +175,11 @@ impl<'s> Node<'s> {
                 html_encode(t, writer)?;
                 write!(writer, " ")?;
             }
-            Self::Code(Code { value, lang, meta }) => {
+            Self::Code(Code {
+                value,
+                lang,
+                meta: _,
+            }) => {
                 let set = syntect::parsing::SyntaxSet::load_defaults_newlines();
 
                 match lang.and_then(|lang| set.find_syntax_by_extension(lang)) {

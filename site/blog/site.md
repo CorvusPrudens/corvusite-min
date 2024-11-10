@@ -1,6 +1,8 @@
 ---
 title: Designing a minimal website
 date: 11/2/24
+description: |
+  It might involve more than you think!
 ---
 
 # Designing a minimal website

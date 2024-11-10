@@ -195,13 +195,13 @@ impl<'s> Node<'s> {
             }
             Self::TextExpression(_) => {}
             Self::Html(el) => el.write(writer)?,
-            Self::Image(Image { alt, url, title }) => {
+            Self::Image(Image { alt, url, title: _ }) => {
                 write!(writer, r#"<img href="{url}" alt="{alt}" />"#)?;
             }
             Self::Link(Link {
                 children,
                 url,
-                title,
+                title: _,
             }) => {
                 write!(writer, r#"<a href="{url}">"#)?;
                 for child in children.0.iter() {
@@ -219,7 +219,11 @@ impl<'s> Node<'s> {
             Self::Text(t) => {
                 write!(writer, "<p>{t}</p>")?;
             }
-            Self::Code(Code { value, lang, meta }) => {
+            Self::Code(Code {
+                value,
+                lang: _,
+                meta: _,
+            }) => {
                 write!(writer, "<blockquote>{value}</blockquote>")?;
             }
             Self::Heading(Heading { children, depth }) => {

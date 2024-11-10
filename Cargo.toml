@@ -20,6 +20,8 @@ wincomp = { path = "wincomp" }
 rayon = "1.10"
 markcomp = { path = "./markcomp" }
 foldhash = "0.1"
+anyhow = "1.0"
+jiff = "0.1"
 
 [profile.dev.package."*"]
 opt-level = 3

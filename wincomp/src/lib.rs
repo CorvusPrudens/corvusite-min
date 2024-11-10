@@ -1,5 +1,4 @@
 use crate::element::{Element, Node};
-use std::{collections::HashMap, hash::BuildHasher, ops::Deref};
 use winnow::{
     ascii::multispace0,
     combinator::{delimited, terminated},
@@ -33,24 +32,20 @@ impl<'s> Document<'s> {
         Ok(Self { nodes })
     }
 
-    pub fn expand<F, G, O>(&mut self, mut components: F, icons: G)
+    pub fn expand<F>(&mut self, mut components: F)
     where
         F: FnMut(&str) -> Option<&Component<'s>>,
-        G: Fn(&str) -> Option<O>,
-        O: Deref<Target = Component<'s>>,
     {
         loop {
-            if !Self::expand_recurse(&mut self.nodes, &mut components, &icons) {
+            if !Self::expand_recurse(&mut self.nodes, &mut components) {
                 break;
             }
         }
     }
 
-    fn expand_recurse<F, G, O>(nodes: &mut Vec<Node<'s>>, components: &mut F, icons: &G) -> bool
+    fn expand_recurse<F>(nodes: &mut Vec<Node<'s>>, components: &mut F) -> bool
     where
         F: FnMut(&str) -> Option<&Component<'s>>,
-        G: Fn(&str) -> Option<O>,
-        O: Deref<Target = Component<'s>>,
     {
         let mut mutated = false;
         let mut index = 0;
@@ -60,15 +55,7 @@ impl<'s> Document<'s> {
                 continue;
             };
 
-            let icon;
-            let component = if let Some(component) = components(&child.name) {
-                Some(component)
-            } else {
-                icon = icons(&child.name);
-                icon.as_deref()
-            };
-
-            if let Some(component) = component {
+            if let Some(component) = components(child.name) {
                 mutated = true;
                 let declared_attributes = &component.root.attributes;
                 let mut replacement_attributes = Vec::with_capacity(declared_attributes.len());
@@ -130,7 +117,7 @@ impl<'s> Document<'s> {
                 continue;
             };
 
-            mutated |= Self::expand_recurse(&mut child.children, components, icons);
+            mutated |= Self::expand_recurse(&mut child.children, components);
 
             index += 1;
         }

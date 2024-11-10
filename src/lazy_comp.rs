@@ -1,56 +1,25 @@
-use std::{
-    collections::HashMap,
-    hash::BuildHasher,
-    ops::Deref,
-    sync::{RwLock, RwLockReadGuard},
-};
+use std::{collections::HashMap, hash::BuildHasher, sync::OnceLock};
 use wincomp::Component;
 
 include!(concat!(env!("OUT_DIR"), "/icons.rs"));
 
 pub struct LazyComponent<'s> {
     raw: &'s str,
-    component: RwLock<Option<Component<'s>>>,
-}
-
-pub struct ComponentGuard<'a, 's>(RwLockReadGuard<'a, Option<Component<'s>>>);
-
-impl<'a, 's> Deref for ComponentGuard<'a, 's> {
-    type Target = Component<'s>;
-
-    fn deref(&self) -> &Self::Target {
-        self.0.as_ref().unwrap()
-    }
+    component: OnceLock<Component<'s>>,
 }
 
 impl<'s> LazyComponent<'s> {
     pub const fn new(raw: &'s str) -> Self {
         Self {
             raw,
-            component: RwLock::new(None),
+            component: OnceLock::new(),
         }
     }
 
-    pub fn component(&self) -> ComponentGuard<'_, 's> {
-        let component = self.component.read().unwrap();
-
-        if component.is_some() {
-            ComponentGuard(component)
-        } else {
-            drop(component);
-
-            let mut component = self.component.write().unwrap();
-
-            /// It's possible this was set to Some before locking.
-            if component.is_none() {
-                let data = Component::new(self.raw).expect("Lazy components should be well-formed");
-                *component = Some(data);
-            }
-            drop(component);
-
-            let component = self.component.read().unwrap();
-            ComponentGuard(component)
-        }
+    pub fn component(&self) -> &Component<'s> {
+        self.component.get_or_init(|| {
+            Component::new(self.raw).expect("Lazy components should be well-formed")
+        })
     }
 }
 
@@ -69,7 +38,7 @@ impl<'s, S> LazyComponents<'s, S>
 where
     S: BuildHasher,
 {
-    pub fn get(&self, name: &str) -> Option<ComponentGuard<'_, 's>> {
+    pub fn get(&self, name: &str) -> Option<&Component<'s>> {
         self.0.get(name).map(|e| e.component())
     }
 }

@@ -1,35 +1,21 @@
 use core::fmt::Debug;
-use std::cell::RefCell;
 use std::io::Write;
-use std::rc::Rc;
-use std::sync::{Arc, LazyLock};
-use std::{convert::Infallible, sync::Mutex};
+use std::sync::LazyLock;
 use wincomp::element::Element;
-use winnow::{
-    ascii::{line_ending, multispace0, space0, space1},
-    combinator::{alt, delimited, fail, opt, peek, preceded, repeat, repeat_till, terminated},
-    error::{AddContext, ContextError, ErrMode, StrContext},
-    stream::{ContainsToken, Stream},
-    token::{any, take_until},
-    PResult, Parser, Stateful,
-};
-
-type Input<'s, 'b, V> = Stateful<&'s str, &'b mut V>;
 
 type VResult<E> = Result<(), E>;
-type SResult<O> = Result<O, ErrMode<()>>;
 
 #[derive(Debug)]
 pub struct Image<'s> {
-    alt: &'s str,
-    url: &'s str,
-    title: Option<&'s str>,
+    pub alt: &'s [u8],
+    pub url: &'s [u8],
+    pub title: Option<&'s [u8]>,
 }
 
 #[derive(Debug)]
 pub struct Code<'s> {
-    value: &'s [u8],
-    lang: Option<&'s [u8]>,
+    pub value: &'s [u8],
+    pub lang: Option<&'s [u8]>,
 }
 
 pub trait Visitor: core::fmt::Debug {
@@ -68,7 +54,7 @@ pub trait Visitor: core::fmt::Debug {
 
     fn html(&mut self, html: Element<'_>) -> VResult<Self::Error>;
 
-    fn image(&mut self, alt: &[u8], url: &[u8], title: Option<&[u8]>) -> VResult<Self::Error>;
+    fn image(&mut self, image: Image<'_>) -> VResult<Self::Error>;
 
     fn link_enter(&mut self) -> VResult<Self::Error>;
     fn link_exit(&mut self, url: &[u8]) -> VResult<Self::Error>;
@@ -100,14 +86,6 @@ fn html_encode<W: std::io::Write>(input: &[u8], writer: &mut W) -> std::io::Resu
     }
 
     Ok(())
-}
-
-fn inline_code<'s, 'b, V: Visitor>(input: &mut Input<'s, 'b, V>) -> SResult<&'s str> {
-    '`'.parse_next(input)?;
-    let value = take_until(0.., '`').parse_next(input)?;
-    '`'.parse_next(input)?;
-
-    Ok(value)
 }
 
 fn advance_to<F>(mut parser: F, hint: u8) -> impl for<'s> FnMut(&mut &'s [u8]) -> &'s [u8]
@@ -253,7 +231,7 @@ fn simple<'s, V: Visitor>(mut input: &'s [u8], visitor: &mut V) -> Result<(), V:
 
     while !input.is_empty() {
         let yaml_seq = &[b'-', b'-', b'-'];
-        let html_seq = &[b'<'];
+        // let html_seq = &[b'<'];
         let code_seq = &[b'`', b'`', b'`'];
         let math_seq = &[b'$', b'$'];
 
@@ -320,12 +298,32 @@ fn simple<'s, V: Visitor>(mut input: &'s [u8], visitor: &mut V) -> Result<(), V:
 static SET: LazyLock<syntect::parsing::SyntaxSet> =
     LazyLock::new(|| syntect::parsing::SyntaxSet::load_defaults_newlines());
 
+#[derive(Debug, serde::Deserialize)]
+pub struct Frontmatter {
+    pub title: String,
+    pub date: String,
+    pub description: String,
+}
+
 #[derive(Debug)]
 pub struct SimpleVisitor {
     in_link: bool,
     output: Vec<u8>,
     link_buffer: Vec<u8>,
+    pub frontmatter: Option<Frontmatter>,
 }
+
+/// Indicates malformed YAML.
+#[derive(Debug)]
+pub struct SimpleError;
+
+impl std::fmt::Display for SimpleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error processing YAML frontmatter")
+    }
+}
+
+impl std::error::Error for SimpleError {}
 
 impl SimpleVisitor {
     fn buffer(&mut self) -> &mut Vec<u8> {
@@ -336,16 +334,17 @@ impl SimpleVisitor {
         }
     }
 
-    pub fn new(input: &[u8]) -> Self {
+    pub fn new(input: &[u8]) -> Result<Self, SimpleError> {
         let mut visitor = Self {
+            frontmatter: None,
             in_link: false,
             output: Vec::with_capacity(input.len()),
             link_buffer: Vec::new(),
         };
 
-        simple(input, &mut visitor).unwrap();
+        simple(input, &mut visitor)?;
 
-        visitor
+        Ok(visitor)
     }
 
     pub fn output(self) -> Vec<u8> {
@@ -354,12 +353,12 @@ impl SimpleVisitor {
 }
 
 impl Visitor for SimpleVisitor {
-    type Error = Infallible;
+    type Error = SimpleError;
 
     fn yaml(&mut self, yaml: &[u8]) -> VResult<Self::Error> {
-        write!(self.buffer(), "<code>").unwrap();
-        self.buffer().extend(yaml);
-        write!(self.buffer(), "</code>").unwrap();
+        let frontmatter = serde_yaml::from_slice(yaml).map_err(|_| SimpleError)?;
+        self.frontmatter = Some(frontmatter);
+
         Ok(())
     }
 
@@ -374,10 +373,10 @@ impl Visitor for SimpleVisitor {
 
     fn footnote_definition_enter(
         &mut self,
-        identifier: &[u8],
-        label: Option<&[u8]>,
+        _identifier: &[u8],
+        _label: Option<&[u8]>,
     ) -> VResult<Self::Error> {
-        Ok(())
+        todo!()
     }
     fn footnote_definition_exit(&mut self) -> VResult<Self::Error> {
         Ok(())
@@ -385,10 +384,10 @@ impl Visitor for SimpleVisitor {
 
     fn footnote_reference(
         &mut self,
-        identifier: &[u8],
-        label: Option<&[u8]>,
+        _identifier: &[u8],
+        _label: Option<&[u8]>,
     ) -> VResult<Self::Error> {
-        Ok(())
+        todo!()
     }
 
     fn page_break(&mut self) -> VResult<Self::Error> {
@@ -444,8 +443,8 @@ impl Visitor for SimpleVisitor {
         Ok(())
     }
 
-    fn image(&mut self, alt: &[u8], url: &[u8], title: Option<&[u8]>) -> VResult<Self::Error> {
-        Ok(())
+    fn image(&mut self, _image: Image<'_>) -> VResult<Self::Error> {
+        todo!()
     }
 
     fn link_enter(&mut self) -> VResult<Self::Error> {

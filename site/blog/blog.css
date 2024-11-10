@@ -25,9 +25,9 @@ article h2 {
 }
 
 article h3 {
-  font-size: 1.5rem;
-  margin-top: 1.75rem;
-  margin-bottom: 1.75rem;
+  font-size: 1.3rem;
+  margin-top: 1.2rem;
+  margin-bottom: 1.2rem;
   font-weight: bold;
 }
 
@@ -37,7 +37,40 @@ article p {
   color: #a9adc1;
 }
 
-/*article a {*/
-/*  text-decoration: underline;*/
-/*  text-decoration-style: dotted;*/
-/*}*/
+hr {
+  width: 100%;
+  border-color: #a9adc1;
+  margin-bottom: 1rem;
+  margin-top: 0rem;
+}
+
+.blog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.blog-header {
+  font-size: 1.5rem;
+}
+
+.blog-link {
+  font-size: 1.5rem;
+}
+
+.blog-date,
+.blog-description {
+  color: #a9adc1;
+}
+
+.articles {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.title-items {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
