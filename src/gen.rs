@@ -178,7 +178,7 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Error> {
                     r#"
                         <BlogCard>
                             <div class="title-items">
-                                <BlogLink href="/blog/{path}">
+                                <BlogLink href="/blog/{path}/">
                                     {}
                                 </BlogLink>
                                 <BlogDate>

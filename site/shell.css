@@ -9,12 +9,11 @@ header {
   width: 100%;
   box-sizing: border-box;
   display: flex;
-  justify-content: center;
   justify-content: space-between;
   align-items: center;
   max-width: 1200px;
-  padding-left: 2rem;
-  padding-right: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   margin-left: auto;
   margin-right: auto;
   margin-top: 1rem;
@@ -30,8 +29,8 @@ header nav {
 
 main {
   max-width: 800px;
-  padding-left: 2rem;
-  padding-right: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   margin-left: auto;
   margin-right: auto;
   display: flex;
@@ -46,8 +45,8 @@ footer {
   max-width: 1200px;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  padding-left: 2rem;
-  padding-right: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
   margin-left: auto;
   margin-right: auto;
   width: 100%;
@@ -71,7 +70,7 @@ footer {
 }
 
 @media (max-width: 500px) {
-  .header-button > a {
+  .header-button {
     display: none;
   }
 }
