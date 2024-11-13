@@ -233,7 +233,7 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Error> {
         .collect::<Result<Vec<_>, Error>>()?;
 
     fs_err::write(build_dir.join("output.css"), combined_css)?;
-    fs_err::remove_dir_all(blog_build_dir)?;
+    // fs_err::remove_dir_all(blog_build_dir)?;
 
     let elapsed = std::time::Instant::now() - start;
 

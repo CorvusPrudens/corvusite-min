@@ -133,7 +133,7 @@ fn end_to_end(c: &mut Criterion) {
     let raw = data.as_bytes();
     c.bench_function("visitor end to end", |b| {
         b.iter(|| {
-            let visit = markcomp::visitor::SimpleVisitor::new(raw);
+            let visit = markcomp::visitor::SimpleVisitor::new(raw).unwrap();
             black_box(visit.output());
         })
     });
@@ -168,7 +168,7 @@ fn end_to_end(c: &mut Criterion) {
     let raw = data.as_bytes();
     c.bench_function("visitor large end to end", |b| {
         b.iter(|| {
-            let visit = markcomp::visitor::SimpleVisitor::new(raw);
+            let visit = markcomp::visitor::SimpleVisitor::new(raw).unwrap();
             black_box(visit.output());
         })
     });
