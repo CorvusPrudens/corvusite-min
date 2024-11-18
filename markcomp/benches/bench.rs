@@ -184,6 +184,26 @@ fn end_to_end(c: &mut Criterion) {
             black_box(comrak::markdown_to_html(&data, &comrak::Options::default()));
         })
     });
+
+    c.bench_function("cmark large end to end", |b| {
+        b.iter(|| {
+            let mut output = Vec::new();
+
+            black_box(
+                pulldown_cmark::html::write_html_io(
+                    &mut output,
+                    pulldown_cmark::Parser::new(&data),
+                )
+                .unwrap(),
+            );
+        })
+    });
+
+    c.bench_function("cmark custom large end to end", |b| {
+        b.iter(|| {
+            black_box(markcomp::pull::Writer::new(&data).unwrap());
+        })
+    });
 }
 
 criterion_group!(benches, parse, write, end_to_end);

@@ -4,6 +4,7 @@
   transition-property: background-color;
   transition-duration: 150ms;
   cursor: pointer;
+  border-radius: 0.375em;
 }
 
 .button-link:hover {

@@ -139,9 +139,9 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Error> {
                 fs_err::create_dir_all(path)?;
             }
 
-            let markdown = fs_err::read(path)?;
+            let markdown = fs_err::read_to_string(path)?;
             let mut output = Vec::new();
-            let mut markdown = markcomp::visitor::SimpleVisitor::new(&markdown)?;
+            let mut markdown = markcomp::pull::Writer::new(&markdown)?;
 
             let frontmatter = markdown
                 .frontmatter

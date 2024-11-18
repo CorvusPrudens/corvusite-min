@@ -12,6 +12,7 @@ markdown = "1.0.0-alpha.21"
 wincomp = { path = "../wincomp" }
 tinyvec = { version = "1.8", features = ["alloc"] }
 syntect = "5.2"
+pulldown-cmark = "0.12"
 
 [dev-dependencies]
 criterion = "0.5"

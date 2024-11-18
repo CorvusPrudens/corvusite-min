@@ -33,17 +33,17 @@ As time went on, the brutality began to soften. He introduced more comic
 relief. The protagonist came to realize how precious his relationships were
 and started depending on others. As Miura changed, so did Berserk.[^1]
 
-[^1]: Miura laid out the story back in the '90s, so his aging didn't change the big things.
+[^1]: Miura laid out the story back in the '90s, so his aging likely didn't change the big things.
 
 <DotBreak />
 
 Berserk is dripping in tension.
 Yet, near the end, the most tense experience I had was
-wondering whether Miura had managed to resolve at least part of the narrative
+wondering whether Miura had gotten to the part I cared about
 before his death.
 
-It's not very often that I experience this kind of extra-narrative tension.
-Most things you could consume exist already in their entirety: old movies,
+I don't usually experience this kind of extra-narrative tension.
+Most things you can consume already exist in their entirety: old movies,
 game series, books -- even TV shows are released all at once these days.
 And even if a story is incomplete, I can take some comfort in knowing
 that someday, probably, the original creator will triumphantly return

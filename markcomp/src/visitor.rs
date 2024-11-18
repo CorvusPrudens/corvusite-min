@@ -29,7 +29,7 @@ pub trait Visitor: core::fmt::Debug {
         identifier: &[u8],
         label: Option<&[u8]>,
     ) -> VResult<Self::Error>;
-    fn footnote_definition_exit(&mut self) -> VResult<Self::Error>;
+    fn footnote_definition_exit(&mut self, identifier: &[u8]) -> VResult<Self::Error>;
 
     fn footnote_reference(
         &mut self,
@@ -282,7 +282,7 @@ fn simple<'s, V: Visitor>(mut input: &'s [u8], visitor: &mut V) -> Result<(), V:
                 input,
                 visitor,
             )?;
-            visitor.footnote_definition_exit();
+            visitor.footnote_definition_exit(ident);
 
             skip_newlines(input);
         } else if starts_with(input, yaml_seq) {
@@ -466,15 +466,17 @@ impl Visitor for SimpleVisitor {
         buffer.extend(identifier);
         write!(buffer, ".</span>").unwrap();
 
+        Ok(())
+    }
+
+    fn footnote_definition_exit(&mut self, identifier: &[u8]) -> VResult<Self::Error> {
+        let buffer = self.buffer();
+
         write!(buffer, r##"<FootnoteRet href="#ref"##);
         buffer.extend(identifier);
         write!(buffer, r#""/>"#).unwrap();
 
-        Ok(())
-    }
-
-    fn footnote_definition_exit(&mut self) -> VResult<Self::Error> {
-        write!(self.buffer(), r#"</p>"#).unwrap();
+        write!(buffer, r#"</p>"#).unwrap();
         self.state.pop();
 
         Ok(())
