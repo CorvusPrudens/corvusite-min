@@ -57,7 +57,7 @@ At the usage site, the component is recursively expanded.
 
 <!-- Expanded -->
 <div>
-  <a class="button-link" href="/hell-world" aria-label="A component example">
+  <a class="button-link" href="/hello-world" aria-label="A component example">
     Hello, world!
   </a>
 </div>

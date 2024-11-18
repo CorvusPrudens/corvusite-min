@@ -1,81 +1,11 @@
 <Shell>
   <html lang="en">
-    <head>
+    <ShellHead>
       <title>Corvus Prudens</title>
-      <meta charset="utf-8" />
-      <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta name="description" content="Corvus's personal site." />
-    </head>
+    </ShellHead>
 
-    <body>
-      <header>
-        <div class="main-link">
-          <a href="/" class="prerender-link link-underline-2">Corvus Prudens</a>
-        </div>
-
-        <nav>
-          <Navlink href="/">Home</Navlink>
-          <Navlink href="/about/">About</Navlink>
-          <Navlink href="/blog/">Blog</Navlink>
-        </nav>
-
-        <div class="header-button">
-          <ButtonLink
-            href="https://github.com/CorvusPrudens/corvusite-min"
-            aria-label="GitHub"
-          >
-            <GithubLogoRegular fill="white" />
-          </ButtonLink>
-        </div>
-      </header>
-
-      <main>
-        <children />
-      </main>
-
-      <footer>
-        © Corvus Prudens 2024
-
-        <div class="link-group">
-          <ButtonLink
-            href="https://youtube.com/CorvusPrudens"
-            aria-label="YouTube"
-          >
-            <YoutubeLogoRegular fill="white" />
-          </ButtonLink>
-          <ButtonLink
-            href="https://soundcloud.com/corvusp"
-            aria-label="SoundCloud"
-          >
-            <SoundcloudLogoRegular fill="white" />
-          </ButtonLink>
-          <div class="footer-button">
-            <ButtonLink
-              href="https://github.com/corvusprudens"
-              aria-label="GitHub"
-            >
-              <GithubLogoRegular fill="white" />
-            </ButtonLink>
-          </div>
-        </div>
-      </footer>
-
-      <script type="speculationrules">
-        {
-          "prefetch": [
-            {
-              "where": { "selector_matches": ".prerender-link" },
-              "eagerness": "eager"
-            }
-          ],
-          "prerender": [
-            {
-              "where": { "selector_matches": ".prerender-link" },
-              "eagerness": "eager"
-            }
-          ]
-        }
-      </script>
-    </body>
+    <ShellBody>
+      <children />
+    </ShellBody>
   </html>
 </Shell>

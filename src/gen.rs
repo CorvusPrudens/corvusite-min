@@ -150,6 +150,12 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Error> {
 
             let date = jiff::fmt::strtime::parse("%D", &frontmatter.date)?.to_date()?;
 
+            write!(
+                &mut output,
+                r#"<html lang="en"><ShellHead><title>{} | Corvus Prudens</title></ShellHead><ShellBody><article>"#,
+                frontmatter.title
+            )?;
+
             articles.push((
                 date,
                 sans_extension.to_string_lossy().to_string(),
@@ -157,9 +163,8 @@ fn process_site(src_dir: &str, build_dir: &str) -> Result<(), Error> {
             ));
             let mut markdown = markdown.output();
 
-            write!(&mut output, "<Shell><article>")?;
             output.append(&mut markdown);
-            write!(&mut output, "</article></Shell>")?;
+            write!(&mut output, "</article></ShellBody></html>")?;
             fs_err::write(outpath, output)?;
 
             Ok(())
