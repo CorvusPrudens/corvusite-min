@@ -63,7 +63,51 @@ h1 {
   align-items: center;
 }
 
+.vid-container {
+  position: relative;
+  width: 300px;
+  height: 300px;
+}
+
 .crow {
+  position: absolute;
   aspect-ratio: 1/1;
   width: 300px;
+  transition: opacity 0.3s ease;
+}
+
+.skeleton {
+  width: 300px;
+  height: 300px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #d0d0d0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.crow.loaded {
+  opacity: 1;
+}
+
+.loading {
+  opacity: 0;
+}
+
+.skeleton.visible {
+  opacity: 0.3;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }

@@ -1,8 +1,64 @@
 <Shell>
   <div class="landing">
-    <AutoVideo
-      class="crow rounded"
-      src="https://corvusite-bucket.s3.us-east-2.amazonaws.com/content/home/bird.webm"
-    />
+    <div class="vid-container" title="Waiting for something to happen?">
+      <div class="skeleton rounded">""</div>
+      <AutoVideo
+        class="crow rounded"
+        src="https://corvusite-bucket.s3.us-east-2.amazonaws.com/content/home/bird.webm"
+      />
+    </div>
   </div>
+
+  <script>
+    const video = document.querySelector(".crow");
+    const skeleton = document.querySelector(".skeleton");
+
+    function showSkeleton() {
+      skeleton.classList.add("visible");
+      video.classList.add("loading");
+      video.classList.remove("loaded");
+    }
+
+    function hideSkeleton() {
+      skeleton.classList.remove("visible");
+      video.classList.add("loaded");
+    }
+
+    function initializeVideo() {
+      // Check if video is already loaded/cached
+      // after an arbitrary period.
+      setTimeout(() => {
+        if (video.readyState >= 3) {
+          // HAVE_FUTURE_DATA or higher
+          hideSkeleton();
+        } else {
+          showSkeleton();
+
+          // Listen for future loads
+          video.addEventListener("canplay", hideSkeleton);
+          video.addEventListener("error", showSkeleton);
+        }
+      }, 50);
+
+      // Handle dynamic source changes
+      video.addEventListener("emptied", showSkeleton);
+    }
+
+    // Run initialization immediately
+    initializeVideo();
+
+    // Also run on dynamic src changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (
+          mutation.type === "attributes" &&
+          mutation.attributeName === "src"
+        ) {
+          initializeVideo();
+        }
+      });
+    });
+
+    observer.observe(video, { attributes: true });
+  </script>
 </Shell>
